@@ -18,6 +18,11 @@ export default function Notenrechner() {
   const [rundungsModus, setRundungsModus] = useState('zehntel');
   const [skalaModus, setSkalaModus] = useState('linear');
   
+  // UI State
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [showKurve, setShowKurve] = useState(true);
+  const [showNotenspiegel, setShowNotenspiegel] = useState(true);
+  
   // Schülerdaten
   const [schueler, setSchueler] = useState<Schueler[]>([]);
   const [neuerName, setNeuerName] = useState('');
@@ -30,14 +35,15 @@ export default function Notenrechner() {
   const [csvPreview, setCsvPreview] = useState<Schueler[]>([]);
   const [csvErrors, setCsvErrors] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const nameInputRef = useRef<HTMLInputElement>(null);
 
   // Skala-Modi Beschreibungen
   const skalaBeschreibungen: Record<string, string> = {
-    linear: 'Gleichmässige Verteilung der Punkte',
-    's-positiv': 'Grosszügig in der Mitte, streng an den Rändern',
-    's-negativ': 'Streng in der Mitte, grosszügig an den Rändern',
-    'kurve-positiv': 'Grosszügig – schneller gute Noten',
-    'kurve-negativ': 'Streng – schwerer gute Noten zu erreichen'
+    linear: 'Gleichmässig',
+    's-positiv': 'Mitte grosszügig',
+    's-negativ': 'Mitte streng',
+    'kurve-positiv': 'Grosszügig',
+    'kurve-negativ': 'Streng'
   };
 
   // Rundungsfunktion
@@ -205,6 +211,7 @@ export default function Notenrechner() {
         setSchueler([...schueler, { id: Date.now(), name: neuerName.trim(), punkte }]);
         setNeuerName('');
         setNeuePunkte('');
+        nameInputRef.current?.focus();
       }
     }
   };
@@ -228,7 +235,9 @@ export default function Notenrechner() {
   };
 
   const alleLoeschen = () => {
-    setSchueler([]);
+    if (confirm('Alle Schüler löschen?')) {
+      setSchueler([]);
+    }
   };
 
   // CSV Template herunterladen
@@ -260,15 +269,12 @@ export default function Notenrechner() {
     const errors: string[] = [];
     const parsed: Schueler[] = [];
     
-    // Header erkennen und überspringen
     const firstLine = lines[0]?.toLowerCase() || '';
     const hasHeader = firstLine.includes('name') || firstLine.includes('punkte');
     const dataLines = hasHeader ? lines.slice(1) : lines;
     
     dataLines.forEach((line, index) => {
       const lineNum = hasHeader ? index + 2 : index + 1;
-      
-      // Trenner erkennen (Semikolon oder Komma)
       const separator = line.includes(';') ? ';' : ',';
       const parts = line.split(separator).map(p => p.trim());
       
@@ -277,7 +283,7 @@ export default function Notenrechner() {
         return;
       }
       
-      const name = parts[0].replace(/^["']|["']$/g, ''); // Anführungszeichen entfernen
+      const name = parts[0].replace(/^["']|["']$/g, '');
       const punkteStr = parts[1].replace(/^["']|["']$/g, '').replace(',', '.');
       const punkte = parseFloat(punkteStr);
       
@@ -317,7 +323,6 @@ export default function Notenrechner() {
     };
     reader.readAsText(file);
     
-    // Reset input
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -352,11 +357,11 @@ export default function Notenrechner() {
 
   const maxVerteilung = Math.max(...Object.values(statistiken.verteilung), 1);
 
-  // SVG Plot Komponente
+  // Kompakte SVG Plot Komponente für Sidebar
   const NotenskalePlot = () => {
-    const width = 400;
-    const height = 250;
-    const padding = { top: 20, right: 30, bottom: 40, left: 50 };
+    const width = 280;
+    const height = 160;
+    const padding = { top: 15, right: 20, bottom: 30, left: 35 };
     const plotWidth = width - padding.left - padding.right;
     const plotHeight = height - padding.top - padding.bottom;
 
@@ -381,63 +386,65 @@ export default function Notenrechner() {
         <rect x={padding.left} y={note4Y} width={plotWidth} height={plotHeight - (note4Y - padding.top)} fill="#fef2f2" />
         <rect x={padding.left} y={padding.top} width={plotWidth} height={note4Y - padding.top} fill="#f0fdf4" />
 
-        {[1, 2, 3, 4, 5, 6].map(note => (
+        {[1, 4, 6].map(note => (
           <g key={note}>
             <line x1={padding.left} y1={yScale(note)} x2={width - padding.right} y2={yScale(note)}
-              stroke={note === 4 ? '#f59e0b' : '#e5e7eb'} strokeWidth={note === 4 ? 2 : 1} strokeDasharray={note === 4 ? '0' : '4'} />
-            <text x={padding.left - 10} y={yScale(note) + 4} textAnchor="end" className="text-xs fill-gray-500">{note}</text>
+              stroke={note === 4 ? '#f59e0b' : '#e5e7eb'} strokeWidth={note === 4 ? 2 : 1} />
+            <text x={padding.left - 8} y={yScale(note) + 4} textAnchor="end" className="text-xs fill-gray-500">{note}</text>
           </g>
         ))}
 
-        {[0, 0.25, 0.5, 0.75, 1].map(ratio => {
+        {[0, 0.5, 1].map(ratio => {
           const pkt = Math.round(ratio * punkteFuer6);
           return (
-            <g key={ratio}>
-              <line x1={xScale(pkt)} y1={padding.top} x2={xScale(pkt)} y2={height - padding.bottom} stroke="#e5e7eb" strokeDasharray="4" />
-              <text x={xScale(pkt)} y={height - padding.bottom + 20} textAnchor="middle" className="text-xs fill-gray-500">{pkt}</text>
-            </g>
+            <text key={ratio} x={xScale(pkt)} y={height - padding.bottom + 15} textAnchor="middle" className="text-xs fill-gray-500">{pkt}</text>
           );
         })}
 
-        <line x1={xScale(punkteFuer4)} y1={padding.top} x2={xScale(punkteFuer4)} y2={height - padding.bottom}
-          stroke="#f59e0b" strokeWidth={2} strokeDasharray="6" />
-
-        <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" />
+        <path d={pathD} fill="none" stroke="#3b82f6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
 
         {schuelerPunkte.map((s, i) => (
-          <circle key={i} cx={s.x} cy={s.y} r={6} fill={s.note >= 4 ? '#22c55e' : '#ef4444'} stroke="white" strokeWidth={2} />
+          <circle key={i} cx={s.x} cy={s.y} r={4} fill={s.note >= 4 ? '#22c55e' : '#ef4444'} stroke="white" strokeWidth={1.5} />
         ))}
-
-        <text x={width / 2} y={height - 5} textAnchor="middle" className="text-sm fill-gray-600 font-medium">Punkte</text>
-        <text x={15} y={height / 2} textAnchor="middle" transform={`rotate(-90, 15, ${height / 2})`} className="text-sm fill-gray-600 font-medium">Note</text>
       </svg>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-800 mb-6 text-center">📊 Notenrechner</h1>
+    <div className="min-h-screen bg-gray-100">
+      {/* Header */}
+      <div className="bg-white border-b shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <h1 className="text-xl font-bold text-gray-800">📊 Notenrechner</h1>
+        </div>
+      </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Linke Spalte */}
-          <div className="space-y-4">
-            {/* Parameter */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">⚙️ Notenskala einstellen</h2>
-              <div className="grid grid-cols-2 gap-3">
+      <div className="max-w-7xl mx-auto p-4 space-y-4">
+        {/* Kollabierbare Einstellungen */}
+        <div className="bg-white rounded-lg shadow">
+          <button
+            onClick={() => setSettingsOpen(!settingsOpen)}
+            className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg transition"
+          >
+            <span className="font-semibold text-gray-700">⚙️ Einstellungen</span>
+            <span className={`transform transition-transform ${settingsOpen ? 'rotate-180' : ''}`}>▼</span>
+          </button>
+          
+          {settingsOpen && (
+            <div className="px-4 pb-4 border-t">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4 pt-4">
                 <div>
                   <label className="block text-sm text-gray-600 mb-1">Max. Punktzahl</label>
                   <input type="number" value={maxPunkte} onChange={(e) => setMaxPunkte(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Punkte für Note 6</label>
+                  <label className="block text-sm text-gray-600 mb-1">Punkte für 6</label>
                   <input type="number" value={punkteFuer6} onChange={(e) => setPunkteFuer6(Math.max(1, parseInt(e.target.value) || 1))}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 <div>
-                  <label className="block text-sm text-gray-600 mb-1">Punkte für Note 4</label>
+                  <label className="block text-sm text-gray-600 mb-1">Punkte für 4</label>
                   <input type="number" value={punkteFuer4} onChange={(e) => setPunkteFuer4(Math.max(0, parseInt(e.target.value) || 0))}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
@@ -445,259 +452,309 @@ export default function Notenrechner() {
                   <label className="block text-sm text-gray-600 mb-1">Rundung</label>
                   <select value={rundungsModus} onChange={(e) => setRundungsModus(e.target.value)}
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="zehntel">Zehntel (0.1)</option>
-                    <option value="viertel">Viertel (0.25)</option>
-                    <option value="halbnoten">Halbnoten (0.5)</option>
+                    <option value="zehntel">Zehntel</option>
+                    <option value="viertel">Viertel</option>
+                    <option value="halbnoten">Halbnoten</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm text-gray-600 mb-1">Skala-Typ</label>
+                  <select value={skalaModus} onChange={(e) => setSkalaModus(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                    {Object.entries(skalaBeschreibungen).map(([key, desc]) => (
+                      <option key={key} value={key}>{desc}</option>
+                    ))}
                   </select>
                 </div>
               </div>
             </div>
+          )}
+        </div>
 
-            {/* Skala-Modus */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">📐 Skala-Typ</h2>
-              <div className="space-y-2">
-                {Object.entries(skalaBeschreibungen).map(([key, beschreibung]) => (
-                  <label key={key}
-                    className={`flex items-start p-2 rounded-lg cursor-pointer transition ${
-                      skalaModus === key ? 'bg-blue-50 border-2 border-blue-500' : 'bg-gray-50 border-2 border-transparent hover:bg-gray-100'
-                    }`}>
-                    <input type="radio" name="skalaModus" value={key} checked={skalaModus === key}
-                      onChange={(e) => setSkalaModus(e.target.value)} className="mt-1 mr-3" />
-                    <div>
-                      <div className="font-medium text-gray-800 capitalize">{key.replace('-', ' ')}</div>
-                      <div className="text-xs text-gray-500">{beschreibung}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
+        {/* Input-Zeile: Neuer Schüler + CSV */}
+        <div className="bg-white rounded-lg shadow p-4">
+          <div className="flex flex-wrap gap-3 items-center">
+            {/* Neuer Schüler */}
+            <div className="flex gap-2 flex-1 min-w-[300px]">
+              <input
+                ref={nameInputRef}
+                type="text"
+                placeholder="Name"
+                value={neuerName}
+                onChange={(e) => setNeuerName(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && schuelerHinzufuegen()}
+                className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <input
+                type="number"
+                placeholder="Punkte"
+                value={neuePunkte}
+                onChange={(e) => setNeuePunkte(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && schuelerHinzufuegen()}
+                min="0"
+                max={maxPunkte}
+                className="w-24 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <button
+                onClick={schuelerHinzufuegen}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition font-medium"
+              >
+                + Hinzufügen
+              </button>
             </div>
 
-            {/* Schüler hinzufügen */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">➕ Schüler/in hinzufügen</h2>
-              <div className="flex gap-2">
-                <input type="text" placeholder="Name" value={neuerName} onChange={(e) => setNeuerName(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && schuelerHinzufuegen()}
-                  className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                <input type="number" placeholder="Pkt" value={neuePunkte} onChange={(e) => setNeuePunkte(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && schuelerHinzufuegen()} min="0" max={maxPunkte}
-                  className="w-20 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
-                <button onClick={schuelerHinzufuegen} className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition">+</button>
-              </div>
-            </div>
+            {/* Divider */}
+            <div className="hidden md:block w-px h-8 bg-gray-300"></div>
 
-            {/* CSV Import/Export */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">📁 CSV Import/Export</h2>
-              <div className="space-y-3">
-                <div className="flex gap-2">
-                  <button onClick={downloadTemplate}
-                    className="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm flex items-center justify-center gap-2">
-                    <span>📥</span> Vorlage
-                  </button>
-                  <label className="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm flex items-center justify-center gap-2 cursor-pointer">
-                    <span>📤</span> Importieren
-                    <input type="file" accept=".csv,.txt" onChange={handleFileUpload} ref={fileInputRef} className="hidden" />
-                  </label>
-                </div>
+            {/* CSV Buttons */}
+            <div className="flex gap-2">
+              <button
+                onClick={downloadTemplate}
+                className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition text-sm"
+                title="CSV-Vorlage herunterladen"
+              >
+                📥 Vorlage
+              </button>
+              <label className="px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition text-sm cursor-pointer">
+                📤 Importieren
+                <input type="file" accept=".csv,.txt" onChange={handleFileUpload} ref={fileInputRef} className="hidden" />
+              </label>
+              {schueler.length > 0 && (
+                <button
+                  onClick={exportCSV}
+                  className="px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm"
+                  title="Liste als CSV exportieren"
+                >
+                  💾 Export
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Hauptbereich: Liste + Sidebar */}
+        <div className="flex gap-4 flex-col lg:flex-row">
+          {/* Schülerliste (Hauptbereich) */}
+          <div className="flex-1 bg-white rounded-lg shadow">
+            <div className="px-4 py-3 border-b flex items-center justify-between">
+              <h2 className="font-semibold text-gray-700">📋 Schülerliste ({schueler.length})</h2>
+              <div className="flex items-center gap-3">
+                <select
+                  value={sortierung}
+                  onChange={(e) => setSortierung(e.target.value as SortOption)}
+                  className="text-sm px-2 py-1 border rounded-lg bg-gray-50"
+                >
+                  <option value="name-asc">Name A-Z</option>
+                  <option value="name-desc">Name Z-A</option>
+                  <option value="punkte-desc">Punkte ↓</option>
+                  <option value="punkte-asc">Punkte ↑</option>
+                  <option value="note-desc">Note ↓</option>
+                  <option value="note-asc">Note ↑</option>
+                </select>
                 {schueler.length > 0 && (
-                  <button onClick={exportCSV}
-                    className="w-full px-3 py-2 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition text-sm flex items-center justify-center gap-2">
-                    <span>💾</span> Liste exportieren
+                  <button onClick={alleLoeschen} className="text-sm text-red-500 hover:text-red-700">
+                    Alle löschen
                   </button>
                 )}
               </div>
-              <p className="text-xs text-gray-400 mt-2">Format: Name;Punkte (Semikolon oder Komma als Trenner)</p>
             </div>
-          </div>
-
-          {/* Mittlere Spalte */}
-          <div className="space-y-4">
-            {/* Plot */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">📈 Notenskala-Kurve</h2>
-              <div className="flex justify-center">
-                <NotenskalePlot />
-              </div>
-              <div className="mt-3 flex justify-center gap-4 text-xs">
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-green-100 border border-green-300 rounded"></div>
-                  <span>Genügend</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 bg-red-100 border border-red-300 rounded"></div>
-                  <span>Ungenügend</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-3 h-0.5 bg-amber-500"></div>
-                  <span>Note 4 Grenze</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Schülerliste (NEU - grösser und editierbar) */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h2 className="font-semibold text-gray-700">📋 Schülerliste ({schueler.length})</h2>
-                <div className="flex items-center gap-2">
-                  <select value={sortierung} onChange={(e) => setSortierung(e.target.value as SortOption)}
-                    className="text-sm px-2 py-1 border rounded-lg bg-gray-50">
-                    <option value="name-asc">Name A-Z</option>
-                    <option value="name-desc">Name Z-A</option>
-                    <option value="punkte-desc">Punkte ↓</option>
-                    <option value="punkte-asc">Punkte ↑</option>
-                    <option value="note-desc">Note ↓</option>
-                    <option value="note-asc">Note ↑</option>
-                  </select>
-                  {schueler.length > 0 && (
-                    <button onClick={alleLoeschen} className="text-sm text-red-500 hover:text-red-700">Alle löschen</button>
-                  )}
-                </div>
-              </div>
-              
+            
+            <div className="p-4">
               {sortierteListe.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Noch keine Schüler erfasst</p>
+                <div className="text-center py-16 text-gray-400">
+                  <div className="text-4xl mb-3">📝</div>
+                  <p>Noch keine Schüler erfasst</p>
+                  <p className="text-sm mt-1">Füge oben Schüler hinzu oder importiere eine CSV-Datei</p>
+                </div>
               ) : (
-                <div className="space-y-1 max-h-80 overflow-y-auto">
-                  {/* Header */}
-                  <div className="grid grid-cols-12 gap-2 px-2 py-1 text-xs text-gray-500 font-medium border-b">
-                    <div className="col-span-5">Name</div>
-                    <div className="col-span-3 text-center">Punkte</div>
-                    <div className="col-span-3 text-center">Note</div>
-                    <div className="col-span-1"></div>
-                  </div>
-                  
-                  {sortierteListe.map((s) => (
-                    <div key={s.id} className="grid grid-cols-12 gap-2 items-center p-2 bg-gray-50 rounded hover:bg-gray-100 group">
-                      {/* Name */}
-                      <div className="col-span-5">
-                        {editingId === s.id ? (
-                          <input type="text" value={s.name} onChange={(e) => nameAktualisieren(s.id, e.target.value)}
-                            onBlur={() => setEditingId(null)} autoFocus
-                            className="w-full px-2 py-1 border rounded text-sm focus:ring-2 focus:ring-blue-500" />
-                        ) : (
-                          <span onClick={() => setEditingId(s.id)} 
-                            className="font-medium truncate block cursor-pointer hover:text-blue-600" title="Klicken zum Bearbeiten">
-                            {s.name}
-                          </span>
-                        )}
-                      </div>
-                      
-                      {/* Punkte */}
-                      <div className="col-span-3">
-                        <input type="number" value={s.punkte} min="0" max={maxPunkte}
-                          onChange={(e) => punkteAktualisieren(s.id, parseFloat(e.target.value) || 0)}
-                          className="w-full px-2 py-1 border rounded text-sm text-center focus:ring-2 focus:ring-blue-500 bg-white" />
-                      </div>
-                      
-                      {/* Note */}
-                      <div className="col-span-3 flex justify-center">
-                        <span className={`px-3 py-1 rounded text-white font-bold text-sm ${getNotenFarbe(s.note)}`}>
-                          {s.note.toFixed(1)}
-                        </span>
-                      </div>
-                      
-                      {/* Löschen */}
-                      <div className="col-span-1 text-right">
-                        <button onClick={() => schuelerEntfernen(s.id)}
-                          className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity">✕</button>
-                      </div>
-                    </div>
-                  ))}
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="text-left text-sm text-gray-500 border-b">
+                        <th className="pb-2 font-medium">Name</th>
+                        <th className="pb-2 font-medium text-center w-32">Punkte</th>
+                        <th className="pb-2 font-medium text-center w-24">Note</th>
+                        <th className="pb-2 w-10"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sortierteListe.map((s) => (
+                        <tr key={s.id} className="border-b last:border-0 hover:bg-gray-50 group">
+                          <td className="py-2 pr-4">
+                            {editingId === s.id ? (
+                              <input
+                                type="text"
+                                value={s.name}
+                                onChange={(e) => nameAktualisieren(s.id, e.target.value)}
+                                onBlur={() => setEditingId(null)}
+                                onKeyPress={(e) => e.key === 'Enter' && setEditingId(null)}
+                                autoFocus
+                                className="w-full px-2 py-1 border rounded focus:ring-2 focus:ring-blue-500"
+                              />
+                            ) : (
+                              <span
+                                onClick={() => setEditingId(s.id)}
+                                className="cursor-pointer hover:text-blue-600"
+                                title="Klicken zum Bearbeiten"
+                              >
+                                {s.name}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-2">
+                            <input
+                              type="number"
+                              value={s.punkte}
+                              min="0"
+                              max={maxPunkte}
+                              onChange={(e) => punkteAktualisieren(s.id, parseFloat(e.target.value) || 0)}
+                              className="w-full px-2 py-1 border rounded text-center focus:ring-2 focus:ring-blue-500 bg-white"
+                            />
+                          </td>
+                          <td className="py-2 text-center">
+                            <span className={`inline-block px-3 py-1 rounded text-white font-bold text-sm min-w-[3rem] ${getNotenFarbe(s.note)}`}>
+                              {s.note.toFixed(1)}
+                            </span>
+                          </td>
+                          <td className="py-2 text-center">
+                            <button
+                              onClick={() => schuelerEntfernen(s.id)}
+                              className="text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              ✕
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Rechte Spalte */}
-          <div className="space-y-4">
+          {/* Sidebar */}
+          <div className="lg:w-80 space-y-4">
             {/* Statistik-Karten */}
-            <div className="grid grid-cols-1 gap-3">
-              <div className="bg-white rounded-lg shadow p-4 text-center">
-                <div className="text-4xl font-bold text-blue-600">{statistiken.schnitt.toFixed(2)}</div>
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="text-center mb-4">
+                <div className="text-4xl font-bold text-blue-600">
+                  {schueler.length > 0 ? statistiken.schnitt.toFixed(2) : '–'}
+                </div>
                 <div className="text-sm text-gray-500">Klassenschnitt</div>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div className="bg-white rounded-lg shadow p-4 text-center">
-                  <div className="text-3xl font-bold text-green-600">{statistiken.genuegend}</div>
-                  <div className="text-sm text-gray-500">Genügend</div>
+                <div className="bg-green-50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-green-600">{statistiken.genuegend}</div>
+                  <div className="text-xs text-green-700">Genügend</div>
                 </div>
-                <div className="bg-white rounded-lg shadow p-4 text-center">
-                  <div className="text-3xl font-bold text-red-600">{statistiken.ungenuegend}</div>
-                  <div className="text-sm text-gray-500">Ungenügend</div>
+                <div className="bg-red-50 rounded-lg p-3 text-center">
+                  <div className="text-2xl font-bold text-red-600">{statistiken.ungenuegend}</div>
+                  <div className="text-xs text-red-700">Ungenügend</div>
                 </div>
               </div>
+              
+              {/* Erfolgsquote */}
+              {schueler.length > 0 && (
+                <div className="mt-4">
+                  <div className="relative h-6 bg-gray-200 rounded-full overflow-hidden">
+                    <div
+                      className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-500"
+                      style={{ width: `${(statistiken.genuegend / schueler.length) * 100}%` }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-xs font-bold">
+                      {Math.round((statistiken.genuegend / schueler.length) * 100)}% bestanden
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Notenverteilung */}
             <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-4">📊 Notenverteilung</h2>
+              <h3 className="font-semibold text-gray-700 mb-3 text-sm">📊 Verteilung</h3>
               {schueler.length === 0 ? (
-                <p className="text-gray-400 text-center py-8">Füge Schüler hinzu</p>
+                <div className="text-gray-400 text-center py-4 text-sm">Keine Daten</div>
               ) : (
-                <div className="flex items-end justify-around h-32 gap-2">
+                <div className="flex items-end justify-around h-24 gap-1">
                   {[6, 5, 4, 3, 2, 1].map((note) => (
                     <div key={note} className="flex flex-col items-center flex-1">
-                      <div className="text-sm font-medium mb-1">{statistiken.verteilung[note]}</div>
-                      <div className={`w-full rounded-t transition-all duration-300 ${note >= 4 ? 'bg-green-400' : 'bg-red-400'}`}
-                        style={{ height: `${(statistiken.verteilung[note] / maxVerteilung) * 80}px`, minHeight: statistiken.verteilung[note] > 0 ? '8px' : '0px' }} />
-                      <div className="text-sm font-medium mt-1 text-gray-600">{note}</div>
+                      <div className="text-xs font-medium mb-1">{statistiken.verteilung[note]}</div>
+                      <div
+                        className={`w-full rounded-t transition-all duration-300 ${note >= 4 ? 'bg-green-400' : 'bg-red-400'}`}
+                        style={{
+                          height: `${(statistiken.verteilung[note] / maxVerteilung) * 60}px`,
+                          minHeight: statistiken.verteilung[note] > 0 ? '4px' : '0px'
+                        }}
+                      />
+                      <div className="text-xs font-medium mt-1 text-gray-600">{note}</div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Erfolgsquote */}
-            {schueler.length > 0 && (
-              <div className="bg-white rounded-lg shadow p-4">
-                <h2 className="font-semibold text-gray-700 mb-3">🎯 Erfolgsquote</h2>
-                <div className="relative h-8 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="absolute left-0 top-0 h-full bg-gradient-to-r from-green-400 to-green-500 transition-all duration-500"
-                    style={{ width: `${(statistiken.genuegend / schueler.length) * 100}%` }} />
-                  <div className="absolute inset-0 flex items-center justify-center text-sm font-bold">
-                    {Math.round((statistiken.genuegend / schueler.length) * 100)}% bestanden
-                  </div>
+            {/* Notenkurve (kollabierbar) */}
+            <div className="bg-white rounded-lg shadow">
+              <button
+                onClick={() => setShowKurve(!showKurve)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="font-semibold text-gray-700 text-sm">📈 Notenkurve</span>
+                <span className={`transform transition-transform text-sm ${showKurve ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+              {showKurve && (
+                <div className="px-4 pb-4 flex justify-center">
+                  <NotenskalePlot />
                 </div>
-              </div>
-            )}
+              )}
+            </div>
 
-            {/* Notenspiegel */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="font-semibold text-gray-700 mb-3">🔢 Notenspiegel</h2>
-              <div className="grid grid-cols-2 gap-1 text-sm">
-                {[6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1].map((note) => {
-                  let punkte;
-                  if (note >= 4) {
-                    const t = (note - 4) / 2;
-                    let invertedT;
-                    switch (skalaModus) {
-                      case 'kurve-positiv': invertedT = Math.pow(t, 1 / 0.6); break;
-                      case 'kurve-negativ': invertedT = Math.pow(t, 1 / 1.8); break;
-                      default: invertedT = t;
-                    }
-                    punkte = punkteFuer4 + invertedT * (punkteFuer6 - punkteFuer4);
-                  } else {
-                    const t = (note - 1) / 3;
-                    let invertedT;
-                    switch (skalaModus) {
-                      case 'kurve-positiv': invertedT = Math.pow(t, 1 / 0.6); break;
-                      case 'kurve-negativ': invertedT = Math.pow(t, 1 / 1.8); break;
-                      default: invertedT = t;
-                    }
-                    punkte = invertedT * punkteFuer4;
-                  }
-                  return (
-                    <div key={note} className={`flex justify-between p-1.5 rounded ${note >= 4 ? 'bg-green-50' : 'bg-red-50'}`}>
-                      <span className="text-gray-600">{Math.round(punkte)} Pkt</span>
-                      <span className="font-medium">= {note.toFixed(1)}</span>
-                    </div>
-                  );
-                })}
-              </div>
-              {(skalaModus === 's-positiv' || skalaModus === 's-negativ') && (
-                <p className="text-xs text-gray-400 mt-2 italic">* Bei S-Kurven ist der Spiegel eine Näherung</p>
+            {/* Notenspiegel (kollabierbar) */}
+            <div className="bg-white rounded-lg shadow">
+              <button
+                onClick={() => setShowNotenspiegel(!showNotenspiegel)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-50 rounded-lg transition"
+              >
+                <span className="font-semibold text-gray-700 text-sm">🔢 Notenspiegel</span>
+                <span className={`transform transition-transform text-sm ${showNotenspiegel ? 'rotate-180' : ''}`}>▼</span>
+              </button>
+              {showNotenspiegel && (
+                <div className="px-4 pb-4">
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    {[6, 5.5, 5, 4.5, 4, 3.5, 3, 2.5, 2, 1.5, 1].map((note) => {
+                      let punkte;
+                      if (note >= 4) {
+                        const t = (note - 4) / 2;
+                        let invertedT;
+                        switch (skalaModus) {
+                          case 'kurve-positiv': invertedT = Math.pow(t, 1 / 0.6); break;
+                          case 'kurve-negativ': invertedT = Math.pow(t, 1 / 1.8); break;
+                          default: invertedT = t;
+                        }
+                        punkte = punkteFuer4 + invertedT * (punkteFuer6 - punkteFuer4);
+                      } else {
+                        const t = (note - 1) / 3;
+                        let invertedT;
+                        switch (skalaModus) {
+                          case 'kurve-positiv': invertedT = Math.pow(t, 1 / 0.6); break;
+                          case 'kurve-negativ': invertedT = Math.pow(t, 1 / 1.8); break;
+                          default: invertedT = t;
+                        }
+                        punkte = invertedT * punkteFuer4;
+                      }
+                      return (
+                        <div key={note} className={`flex justify-between p-1.5 rounded text-xs ${note >= 4 ? 'bg-green-50' : 'bg-red-50'}`}>
+                          <span className="text-gray-600">{Math.round(punkte)} Pkt</span>
+                          <span className="font-medium">= {note.toFixed(1)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {(skalaModus === 's-positiv' || skalaModus === 's-negativ') && (
+                    <p className="text-xs text-gray-400 mt-2 italic">* Bei S-Kurven Näherung</p>
+                  )}
+                </div>
               )}
             </div>
           </div>
@@ -715,7 +772,7 @@ export default function Notenrechner() {
             <div className="p-4 overflow-y-auto max-h-96">
               {csvErrors.length > 0 && (
                 <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <p className="font-medium text-red-700 mb-2">⚠️ {csvErrors.length} Fehler gefunden:</p>
+                  <p className="font-medium text-red-700 mb-2">⚠️ {csvErrors.length} Fehler:</p>
                   <ul className="text-sm text-red-600 list-disc list-inside">
                     {csvErrors.slice(0, 5).map((err, i) => <li key={i}>{err}</li>)}
                     {csvErrors.length > 5 && <li>...und {csvErrors.length - 5} weitere</li>}
