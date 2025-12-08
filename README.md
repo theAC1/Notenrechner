@@ -10,13 +10,6 @@ Interaktiver Notenrechner für das Schweizer Schulsystem.
 - Notenverteilung und Statistiken
 - Responsive Design
 
-## Deployment auf Vercel
-
-1. Repository auf GitHub erstellen
-2. Diese Dateien hochladen
-3. Mit Vercel verbinden
-4. Fertig!
-
 ## Lokale Entwicklung
 
 ```bash
