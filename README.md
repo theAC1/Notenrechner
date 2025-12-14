@@ -8,7 +8,17 @@ This contains everything you need to run your app locally.
 
 View your app in AI Studio: https://ai.studio/apps/drive/1nhXXvGq4kX6LUqwE-2TAMLDm8MTKsmWu
 
-## Run Locally
 
-**Prerequisites:**  Node.js
+# Notenrechner
 
+Interaktiver Notenrechner für das Schweizer Schulsystem.
+
+## Features
+
+- Verschiedene Skala-Typen (Linear, S-Kurve, Potenz-Kurve)
+- Einstellbare Parameter (Punkte für Note 4/6, Rundung)
+- Live-Visualisierung der Notenkurve
+- Notenverteilung und Statistiken
+- Responsive Design
+
+## Lokale Entwicklung
