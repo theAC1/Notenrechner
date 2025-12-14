@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Swiss Grade Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            colors: {
+              slate: {
+                750: '#293548', // Custom shade between 700 and 800 for subtle contrast
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      @media print {
+        .no-print {
+          display: none !important;
+        }
+        .print-only {
+          display: block !important;
+        }
+        body {
+          background-color: white;
+          color: black;
+        }
+        .page-break {
+          page-break-before: always;
+        }
+      }
+      /* Custom resize handle for tiles */
+      .react-grid-item > .react-resizable-handle {
+        background-image: none;
+        width: 15px;
+        height: 15px;
+        bottom: 5px;
+        right: 5px;
+        border-right: 2px solid #94a3b8;
+        border-bottom: 2px solid #94a3b8;
+        cursor: se-resize;
+        z-index: 10;
+      }
+      /* Dark mode handle adjustment */
+      .dark .react-grid-item > .react-resizable-handle {
+         border-right: 2px solid #475569;
+         border-bottom: 2px solid #475569;
+      }
+      .react-grid-item > .react-resizable-handle::after {
+        content: '';
+        position: absolute;
+        right: 3px;
+        bottom: 3px;
+        width: 5px;
+        height: 5px;
+        border-right: 2px solid #cbd5e1;
+        border-bottom: 2px solid #cbd5e1;
+      }
+      .dark .react-grid-item > .react-resizable-handle::after {
+        border-right: 2px solid #64748b;
+        border-bottom: 2px solid #64748b;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@18.3.1",
+    "react/": "https://esm.sh/react@18.3.1/",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
+    "react-dom/": "https://esm.sh/react-dom@18.3.1/",
+    "recharts": "https://esm.sh/recharts@2.12.7?external=react,react-dom",
+    "lucide-react": "https://esm.sh/lucide-react@0.378.0",
+    "react-grid-layout": "https://esm.sh/react-grid-layout@1.4.4?external=react,react-dom",
+    "lodash": "https://esm.sh/lodash@4.17.21"
+  }
+}
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-grid-layout@1.4.4/css/styles.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/react-resizable@3.0.5/css/styles.css" />
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-50 text-slate-900 dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200">
+    <div id="root"></div>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

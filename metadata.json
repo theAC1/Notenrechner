@@ -1,0 +1,5 @@
+{
+  "name": "Swiss Grade Calculator",
+  "description": "A professional tool for Swiss teachers to calculate grades, visualize distributions, and generate reports using various scaling algorithms.",
+  "requestFramePermissions": []
+}
