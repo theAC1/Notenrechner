@@ -18,9 +18,9 @@ const GradeScaleTable: React.FC<GradeScaleTableProps> = ({ config, lang }) => {
     for (let g = config.gradeMax; g >= config.gradeMin; g -= step) {
       const currentGrade = Math.round(g * 100) / 100;
       let minRawGrade = currentGrade - (step / 2);
-      
+
       if (currentGrade === config.gradeMin) {
-        rows.push({ grade: currentGrade, minPoints: 0 });
+        rows.push({ grade: currentGrade, minPoints: config.pointsFor1 });
         continue;
       }
       

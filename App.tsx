@@ -31,6 +31,7 @@ const DEFAULT_CONFIG: GradingConfig = {
   maxPossiblePoints: 60,
   pointsFor6: 55,
   pointsFor4: 33,
+  pointsFor1: 0,
   gradeMin: 1.0,
   gradeMax: 6.0,
   roundingStep: 0.5,

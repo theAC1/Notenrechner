@@ -5,6 +5,7 @@ export const TRANSLATIONS = {
     maxPossiblePoints: "Max Possible Points",
     pointsFor6: "Points for Grade 6",
     pointsFor4: "Points for Grade 4",
+    pointsFor1: "Points for Grade 1",
     minGrade: "Min Grade",
     rounding: "Rounding",
     algorithm: "Grading Curve",
@@ -40,6 +41,7 @@ export const TRANSLATIONS = {
     maxPossiblePoints: "Max. Punktzahl (Prüfung)",
     pointsFor6: "Punkte für Note 6",
     pointsFor4: "Punkte für Note 4",
+    pointsFor1: "Punkte für Note 1",
     minGrade: "Tiefste Note",
     rounding: "Rundung",
     algorithm: "Notenskala-Typ",
@@ -75,6 +77,7 @@ export const TRANSLATIONS = {
     maxPossiblePoints: "Points Max. (Examen)",
     pointsFor6: "Points pour Note 6",
     pointsFor4: "Points pour Note 4",
+    pointsFor1: "Points pour Note 1",
     minGrade: "Note Min.",
     rounding: "Arrondi",
     algorithm: "Type d'échelle",
@@ -125,7 +128,12 @@ const getExponent = (algo: AlgorithmType): number => {
 export const calculateRawGrade = (points: number, config: GradingConfig): number => {
   // Clamp points to max possible for safety
   const p = Math.max(0, Math.min(points, config.maxPossiblePoints));
-  
+
+  // If points < pointsFor1, return minimum grade
+  if (p < config.pointsFor1) {
+    return config.gradeMin;
+  }
+
   // If points >= Points for 6, return Max Grade
   if (p >= config.pointsFor6) {
     return config.gradeMax;
@@ -133,11 +141,13 @@ export const calculateRawGrade = (points: number, config: GradingConfig): number
 
   const exponent = getExponent(config.algorithm);
   const passGrade = 4.0;
-  
+
   if (p < config.pointsFor4) {
-    // Segment 1: 0 to PointsFor4 maps to GradeMin to 4.0
+    // Segment 1: pointsFor1 to PointsFor4 maps to GradeMin to 4.0
     // Normalized ratio (0 to 1)
-    const ratio = p / Math.max(0.1, config.pointsFor4);
+    const rangePoints = Math.max(0.1, config.pointsFor4 - config.pointsFor1);
+    const pointsAbove = p - config.pointsFor1;
+    const ratio = pointsAbove / rangePoints;
     // Apply curve
     const curvedRatio = Math.pow(ratio, exponent); // If exp < 1 (Nice), this boosts low scores.
     // Scale
@@ -147,12 +157,12 @@ export const calculateRawGrade = (points: number, config: GradingConfig): number
     const rangePoints = config.pointsFor6 - config.pointsFor4;
     const pointsAbove = p - config.pointsFor4;
     const ratio = pointsAbove / Math.max(0.1, rangePoints);
-    
+
     // For the upper segment:
     // "Nice" (Concave): curve should bulge up. x^0.8 does that.
     // "Hard" (Convex): curve should sag down. x^1.2 does that.
     const curvedRatio = Math.pow(ratio, exponent);
-    
+
     return passGrade + (curvedRatio * (config.gradeMax - passGrade));
   }
 };
@@ -167,8 +177,8 @@ export const calculateGrade = (points: number, config: GradingConfig): number =>
 export const getMinPointsForGrade = (targetRawGrade: number, config: GradingConfig): number => {
   const exponent = getExponent(config.algorithm);
   const passGrade = 4.0;
-  
-  if (targetRawGrade <= config.gradeMin) return 0;
+
+  if (targetRawGrade <= config.gradeMin) return config.pointsFor1;
   if (targetRawGrade >= config.gradeMax) return config.pointsFor6;
 
   if (targetRawGrade < passGrade) {
@@ -178,7 +188,8 @@ export const getMinPointsForGrade = (targetRawGrade: number, config: GradingConf
     // Ratio = ((Grade - Min) / (Pass - Min)) ^ (1/Exp)
     const gradeRange = passGrade - config.gradeMin;
     const ratio = Math.pow((targetRawGrade - config.gradeMin) / gradeRange, 1 / exponent);
-    return ratio * config.pointsFor4;
+    const rangePoints = config.pointsFor4 - config.pointsFor1;
+    return config.pointsFor1 + (ratio * rangePoints);
   } else {
     // Inverse of Segment 2
     // Grade = Pass + (Ratio^Exp * (Max - Pass))
