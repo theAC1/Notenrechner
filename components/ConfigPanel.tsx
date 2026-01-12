@@ -16,7 +16,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, lang }) => 
     const newConfig = { ...config, [key]: value };
     if (key === 'pointsFor6') {
       if (newConfig.pointsFor4 >= value) {
-        newConfig.pointsFor4 = value * 0.6; 
+        newConfig.pointsFor4 = value * 0.6;
+      }
+    }
+    if (key === 'pointsFor4') {
+      if (newConfig.pointsFor1 >= value) {
+        newConfig.pointsFor1 = Math.max(0, value * 0.3);
       }
     }
     onChange(newConfig);
@@ -34,7 +39,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, lang }) => 
       <div className="space-y-6 mt-4">
         {/* Points Configuration Grid */}
         <div className="grid grid-cols-2 gap-4">
-          
+
           {/* Max Possible Points */}
           <div className="space-y-1">
             <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
@@ -77,6 +82,22 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ config, onChange, lang }) => 
               value={config.pointsFor4}
               onChange={(e) => handleChange('pointsFor4', parseFloat(e.target.value) || 0)}
               className="w-full bg-white dark:bg-slate-900 border border-emerald-200 dark:border-emerald-800 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-emerald-500 outline-none transition-all"
+            />
+          </div>
+
+          {/* Points for Grade 1 */}
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase text-red-700 dark:text-red-400">
+               {t.pointsFor1}
+            </label>
+            <input
+              type="number"
+              min="0"
+              max={config.pointsFor4}
+              step="0.5"
+              value={config.pointsFor1}
+              onChange={(e) => handleChange('pointsFor1', parseFloat(e.target.value) || 0)}
+              className="w-full bg-white dark:bg-slate-900 border border-red-200 dark:border-red-800 rounded-lg px-3 py-2 text-slate-900 dark:text-white font-bold focus:ring-2 focus:ring-red-500 outline-none transition-all"
             />
           </div>
 

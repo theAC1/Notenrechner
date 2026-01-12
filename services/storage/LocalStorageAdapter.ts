@@ -24,12 +24,9 @@ export class LocalStorageAdapter implements StorageAdapter {
 
       const parsed = JSON.parse(data) as AppStorage;
 
-      // Validate version and migrate if needed
-      if (parsed.version !== STORAGE_VERSION) {
-        return await this.migrate(parsed);
-      }
-
-      return parsed;
+      // Always migrate to ensure backward compatibility
+      // (e.g., adding new fields to existing configs)
+      return await this.migrate(parsed);
     } catch (error) {
       console.error('Failed to load from localStorage:', error);
       // Return default storage on error
@@ -190,10 +187,19 @@ export class LocalStorageAdapter implements StorageAdapter {
    * Migrate from old storage version to current
    */
   private async migrate(oldStorage: AppStorage): Promise<AppStorage> {
-    // For now, just update version and return
-    // Future migrations would be handled here
+    // Migrate exams to add pointsFor1 field if missing
+    const migratedExams = oldStorage.exams.map(exam => ({
+      ...exam,
+      config: {
+        ...exam.config,
+        // Add pointsFor1 if it doesn't exist (default to 0 for backward compatibility)
+        pointsFor1: exam.config.pointsFor1 !== undefined ? exam.config.pointsFor1 : 0
+      }
+    }));
+
     return {
       ...oldStorage,
+      exams: migratedExams,
       version: STORAGE_VERSION
     };
   }
