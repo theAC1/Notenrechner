@@ -97,30 +97,364 @@ Interactive grade calculator for the Swiss school system with configurable gradi
 
 ## 🚧 Planned Milestones
 
-### Phase 5: Data Persistence & Management
+### Phase 5: Data Persistence & Multiple Exam Management
 **Priority: High | Target: Q1 2026**
 
-- [ ] **Local Data Storage**
-  - LocalStorage integration for saving sessions
-  - Auto-save functionality
-  - Session recovery on page reload
-  - Clear data/reset functionality
+This phase transforms the single-exam calculator into a full exam management system with persistent storage.
 
-- [ ] **Multiple Exam Management**
-  - Create multiple exams/tests
-  - Switch between different exams
-  - Exam metadata (name, date, subject, class)
-  - Exam templates for quick setup
-  - Duplicate exam feature
+#### **Architecture Decisions:**
+- **Storage:** LocalStorage (with abstracted interface for future cloud migration)
+- **Scope:** Exam management only (class management deferred to Phase 6)
+- **No Limits:** Unlimited number of exams
+- **Sorting:** Default sort by date (newest first)
+- **No Templates:** Template functionality not implemented in this phase
 
-- [ ] **Class Management**
+---
+
+#### **Phase 5.1: Data Structures & Storage Layer**
+**Estimated: 4-6 hours**
+
+- [ ] **Type Definitions**
+  ```typescript
+  interface Exam {
+    id: string;                    // Unique identifier (UUID)
+    name: string;                  // e.g., "Mathematik Test 1"
+    subject?: string;              // e.g., "Mathematik"
+    date: string;                  // ISO-8601 format
+    config: GradingConfig;         // Grading configuration
+    students: Student[];           // Students with points/grades
+    createdAt: string;             // ISO-8601 timestamp
+    updatedAt: string;             // ISO-8601 timestamp
+  }
+  ```
+
+- [ ] **Storage Adapter Interface**
+  - Create abstract `StorageAdapter` interface
+  - Implement `LocalStorageAdapter` with methods:
+    - `saveExam(exam: Exam): Promise<void>`
+    - `loadExams(): Promise<Exam[]>`
+    - `deleteExam(id: string): Promise<void>`
+    - `getExam(id: string): Promise<Exam | null>`
+    - `updateExam(id: string, updates: Partial<Exam>): Promise<void>`
+  - Error handling and quota checks
+  - Storage versioning for future migrations
+
+- [ ] **Data Migration**
+  - Migrate existing single-exam state to Exam structure
+  - Create default exam from current state on first load
+  - Preserve user's existing data
+  - Add migration version tracking
+
+---
+
+#### **Phase 5.2: Exam Management Core**
+**Estimated: 6-8 hours**
+
+- [ ] **Context & State Management**
+  - Create `ExamContext` with React Context API
+  - Implement `ExamProvider` wrapping App component
+  - State management for:
+    - `exams: Exam[]` - All exams
+    - `activeExamId: string | null` - Currently selected exam
+    - `isLoading: boolean` - Loading state
+    - `error: string | null` - Error messages
+
+- [ ] **Core Operations**
+  - **Create Exam**
+    - Modal with form (name, subject, date)
+    - Option to start empty or copy students from another exam
+    - Generate unique ID (nanoid or uuid)
+    - Auto-set as active exam
+    - Auto-save to LocalStorage
+
+  - **Switch Exam**
+    - Load exam data from storage
+    - Update activeExamId
+    - Trigger re-render of all components
+    - Smooth transition animation
+
+  - **Update Exam**
+    - Edit exam metadata (name, subject, date)
+    - Update students and config
+    - Auto-save on changes (debounced)
+    - Optimistic UI updates
+
+  - **Delete Exam**
+    - Confirmation dialog with exam details
+    - Remove from storage
+    - Switch to most recent remaining exam
+    - Handle last exam deletion gracefully
+
+  - **Duplicate Exam**
+    - Copy exam with new ID and timestamp
+    - Option to copy students or start fresh
+    - Auto-append " (Copy)" to name
+    - Set as active exam
+
+- [ ] **Auto-Save System**
+  - Debounced save (500ms after last change)
+  - Save on exam switch
+  - Save on window beforeunload event
+  - Visual indicator for save status (saved/saving/error)
+  - Recovery mechanism for failed saves
+
+---
+
+#### **Phase 5.3: User Interface Components**
+**Estimated: 8-10 hours**
+
+- [ ] **Exam Selector (Dropdown)**
+  - Header component showing current exam
+  - Click to expand dropdown with all exams
+  - Each exam shows:
+    - Name and date
+    - Subject (if set)
+    - Number of students
+    - Average grade (if calculated)
+  - Search/filter functionality
+  - Keyboard navigation (arrow keys, Enter, Escape)
+  - Sort options:
+    - Date (newest first) - DEFAULT
+    - Date (oldest first)
+    - Name (A-Z)
+    - Name (Z-A)
+
+- [ ] **Create Exam Modal**
+  - Form fields:
+    - Exam name (required)
+    - Subject (optional)
+    - Date (default: today)
+    - "Copy students from" dropdown (optional)
+      - "Start empty"
+      - List of existing exams
+  - Form validation
+  - Create & switch to new exam
+  - Cancel button
+
+- [ ] **Exam Options Menu (3-dot menu)**
+  - Edit metadata (name, subject, date)
+  - Duplicate exam
+  - Export options:
+    - "Export this exam" (CSV)
+    - "Export all exams" (ZIP with multiple CSVs)
+    - "Export as JSON backup"
+  - Delete exam (with confirmation)
+
+- [ ] **Empty State**
+  - Show when no exams exist
+  - Large "Create your first exam" button
+  - Optional: Quick start guide/tips
+
+- [ ] **Exam List View (in dropdown)**
+  ```
+  ┌─────────────────────────────────────────┐
+  │ 🔍 Search exams...                      │
+  ├─────────────────────────────────────────┤
+  │ ✓ Mathematik Test 1        05.01.2026   │
+  │   25 Schüler · Ø 4.8                    │
+  │   ⋮ [Edit][Duplicate][Delete]           │
+  ├─────────────────────────────────────────┤
+  │   Deutsch Aufsatz          03.01.2026   │
+  │   22 Schüler · Ø 4.2                    │
+  ├─────────────────────────────────────────┤
+  │   Physik Klausur           20.12.2025   │
+  │   25 Schüler · Ø 4.5                    │
+  ├─────────────────────────────────────────┤
+  │ + Neue Prüfung erstellen                │
+  └─────────────────────────────────────────┘
+  ```
+
+- [ ] **Toast Notifications**
+  - Exam created
+  - Exam saved
+  - Exam deleted
+  - Exam duplicated
+  - Save errors
+  - Storage quota warnings
+
+---
+
+#### **Phase 5.4: Enhanced Export Features**
+**Estimated: 3-4 hours**
+
+- [ ] **Export Options**
+  - **Single Exam Export (CSV)**
+    - Current exam only
+    - Same format as existing export
+
+  - **All Exams Export (ZIP)**
+    - Create ZIP file with:
+      - One CSV per exam (named: `{exam-name}_{date}.csv`)
+      - `index.txt` with exam list
+    - Use JSZip library
+
+  - **JSON Backup Export**
+    - Complete data export for backup/migration
+    - All exams with full metadata
+    - Includes settings and preferences
+    - Human-readable JSON format
+
+  - **JSON Import**
+    - Import from JSON backup
+    - Validation and error handling
+    - Merge with existing data or replace
+
+- [ ] **Export UI**
+  - Export button in exam options menu
+  - Modal with export options
+  - Progress indicator for large exports
+  - Download confirmation
+
+---
+
+#### **Phase 5.5: Polish & UX Improvements**
+**Estimated: 4-5 hours**
+
+- [ ] **Keyboard Shortcuts**
+  - `Cmd/Ctrl + N` - New exam
+  - `Cmd/Ctrl + S` - Manual save (usually auto)
+  - `Cmd/Ctrl + D` - Duplicate current exam
+  - `Cmd/Ctrl + E` - Focus exam selector
+  - `Escape` - Close modals/dropdowns
+
+- [ ] **Loading States**
+  - Skeleton loaders for exam list
+  - Spinner during save operations
+  - Smooth transitions between exams
+
+- [ ] **Error Handling**
+  - Storage quota exceeded warning
+  - Corrupt data recovery
+  - Network errors (for future cloud sync)
+  - User-friendly error messages
+
+- [ ] **Animations & Transitions**
+  - Fade in/out for modals
+  - Slide animation for exam switch
+  - Smooth dropdown open/close
+  - Success/error toast animations
+
+- [ ] **Responsive Design**
+  - Mobile-optimized exam selector
+  - Touch-friendly dropdowns
+  - Swipe gestures for exam navigation
+  - Condensed UI for small screens
+
+---
+
+#### **Phase 5.6: Testing & Documentation**
+**Estimated: 3-4 hours**
+
+- [ ] **Unit Tests**
+  - Storage adapter tests
+  - Exam CRUD operations
+  - Data migration tests
+  - Error handling tests
+
+- [ ] **Integration Tests**
+  - Complete exam lifecycle
+  - Multi-exam workflows
+  - Export/import functionality
+
+- [ ] **User Documentation**
+  - How to create exams
+  - How to switch between exams
+  - How to backup/restore data
+  - FAQ section
+
+---
+
+#### **User Stories - Phase 5**
+
+**As a teacher, I want to...**
+1. ✅ Create multiple exams for different subjects and classes
+2. ✅ Quickly switch between my exams without losing data
+3. ✅ Duplicate an exam to reuse the same student list
+4. ✅ See all my exams in one organized list with key stats
+5. ✅ Have my data automatically saved so I never lose work
+6. ✅ Export a backup of all my exams for safekeeping
+7. ✅ Delete old exams I no longer need
+8. ✅ Search through my exams when I have many
+9. ✅ Copy students from one exam to another to save time
+10. ✅ Know when my data is saved vs. saving
+
+---
+
+#### **Technical Implementation Notes**
+
+**Storage Structure (LocalStorage):**
+```json
+{
+  "version": "1.0.0",
+  "activeExamId": "exam-abc123",
+  "exams": [
+    {
+      "id": "exam-abc123",
+      "name": "Mathematik Test 1",
+      "subject": "Mathematik",
+      "date": "2026-01-05",
+      "config": { /* GradingConfig */ },
+      "students": [ /* Student[] */ ],
+      "createdAt": "2026-01-05T10:00:00.000Z",
+      "updatedAt": "2026-01-05T14:30:00.000Z"
+    }
+  ],
+  "settings": {
+    "language": "de",
+    "darkMode": false
+  }
+}
+```
+
+**File Structure:**
+```
+src/
+├── contexts/
+│   └── ExamContext.tsx          # Context & Provider
+├── services/
+│   ├── storage/
+│   │   ├── StorageAdapter.ts    # Interface
+│   │   └── LocalStorageAdapter.ts
+│   └── examService.ts           # Business logic
+├── components/
+│   ├── ExamSelector.tsx         # Dropdown component
+│   ├── CreateExamModal.tsx      # Creation dialog
+│   ├── ExamOptionsMenu.tsx      # 3-dot menu
+│   └── ExamListItem.tsx         # List item component
+├── hooks/
+│   └── useExams.ts              # Custom hook
+└── types/
+    └── exam.ts                  # Exam interfaces
+```
+
+**Dependencies to Add:**
+- `nanoid` or `uuid` for ID generation
+- `jszip` for multi-exam ZIP export
+- `date-fns` for date formatting (already have?)
+- `react-hot-toast` or similar for notifications
+
+---
+
+#### **Success Criteria - Phase 5**
+
+- [ ] User can create unlimited exams
+- [ ] User can switch between exams in <1 second
+- [ ] No data loss on browser refresh
+- [ ] Auto-save works reliably within 500ms
+- [ ] Export/import preserves all data accurately
+- [ ] UI is responsive and intuitive
+- [ ] LocalStorage usage is optimized (<5MB typical)
+- [ ] Works offline 100% of the time
+
+### Phase 6: Class Management & Advanced Features
+**Priority: Medium | Target: Q2 2026**
+
+- [ ] **Class Management** *(Deferred from Phase 5)*
   - Manage multiple classes
   - Class roster templates
   - Reuse student lists across exams
   - Class-level statistics
-
-### Phase 6: Advanced Features
-**Priority: High | Target: Q2 2026**
+  - Link exams to specific classes
 
 - [ ] **Enhanced Analytics**
   - Grade trend analysis over time
