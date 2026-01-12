@@ -1,16 +1,17 @@
 import React, { useRef } from 'react';
-import { Student, GradingConfig, Language } from '../types';
-import { Trash2, Copy, FileUp, FileDown, Plus } from 'lucide-react';
+import { Student, GradingConfig, Language, AlgorithmType } from '../types';
+import { Trash2, Copy, FileUp, FileDown, Plus, Sparkles } from 'lucide-react';
 import { parseCSV, generateId, downloadCSV, TRANSLATIONS } from '../utils';
 
 interface StudentTableProps {
   students: Student[];
   config: GradingConfig;
   onUpdateStudents: (students: Student[]) => void;
+  onLoadExample?: (students: Student[], config: GradingConfig) => void;
   lang: Language;
 }
 
-const StudentTable: React.FC<StudentTableProps> = ({ students, config, onUpdateStudents, lang }) => {
+const StudentTable: React.FC<StudentTableProps> = ({ students, config, onUpdateStudents, onLoadExample, lang }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const t = TRANSLATIONS[lang];
 
@@ -23,6 +24,42 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, config, onUpdateS
       isPassing: false,
     };
     onUpdateStudents([...students, newStudent]);
+  };
+
+  const loadExampleData = async () => {
+    try {
+      // Fetch example.list.csv
+      const response = await fetch('/example.list.csv');
+      const text = await response.text();
+
+      // Parse CSV
+      const parsed = parseCSV(text);
+      const exampleStudents = parsed.map(p => ({
+        id: generateId(),
+        name: p.name,
+        points: p.points,
+        grade: 0,
+        isPassing: false
+      }));
+
+      // Example config as per user requirements
+      const exampleConfig: GradingConfig = {
+        maxPossiblePoints: 100,
+        pointsFor6: 97,
+        pointsFor4: 70,
+        gradeMin: 1.0,
+        gradeMax: 6.0,
+        roundingStep: 0.5,
+        algorithm: AlgorithmType.LINEAR
+      };
+
+      // Call the handler if provided
+      if (onLoadExample) {
+        onLoadExample(exampleStudents, exampleConfig);
+      }
+    } catch (error) {
+      console.error('Failed to load example data:', error);
+    }
   };
 
   const updateStudent = (id: string, field: keyof Student, value: any) => {
@@ -67,21 +104,30 @@ const StudentTable: React.FC<StudentTableProps> = ({ students, config, onUpdateS
             className="hidden"
             onChange={handleFileUpload}
           />
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="p-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
             title={t.import}
           >
             <FileUp size={18} />
           </button>
-          <button 
+          {onLoadExample && (
+            <button
+              onClick={loadExampleData}
+              className="p-2 text-slate-600 dark:text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              title={lang === 'de' ? 'Beispieldaten laden' : lang === 'fr' ? 'Charger des données d\'exemple' : 'Load example data'}
+            >
+              <Sparkles size={18} />
+            </button>
+          )}
+          <button
             onClick={() => downloadCSV(students)}
             className="p-2 text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-slate-700 rounded-lg transition-colors"
             title={t.export}
           >
             <FileDown size={18} />
           </button>
-          <button 
+          <button
             onClick={addStudent}
             className="flex items-center gap-1 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors"
           >
