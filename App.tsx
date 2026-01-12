@@ -61,19 +61,19 @@ const defaultEditLayouts = {
 
 const defaultReportLayouts = {
   lg: [
-    { i: 'dist', x: 0, y: 0, w: 6, h: 7 },
-    { i: 'curve', x: 6, y: 0, w: 6, h: 7 },
-    { i: 'table', x: 0, y: 7, w: 12, h: 20 },
+    { i: 'dist', x: 0, y: 0, w: 4, h: 8 },
+    { i: 'curve', x: 4, y: 0, w: 4, h: 8 },
+    { i: 'table', x: 8, y: 0, w: 4, h: 16 },
   ],
   md: [
-    { i: 'dist', x: 0, y: 0, w: 5, h: 6 },
-    { i: 'curve', x: 5, y: 0, w: 5, h: 6 },
-    { i: 'table', x: 0, y: 6, w: 10, h: 16 },
+    { i: 'dist', x: 0, y: 0, w: 5, h: 7 },
+    { i: 'curve', x: 5, y: 0, w: 5, h: 7 },
+    { i: 'table', x: 0, y: 7, w: 5, h: 14 },
   ],
   sm: [
     { i: 'dist', x: 0, y: 0, w: 6, h: 6 },
     { i: 'curve', x: 0, y: 6, w: 6, h: 6 },
-    { i: 'table', x: 0, y: 12, w: 6, h: 16 },
+    { i: 'table', x: 0, y: 12, w: 6, h: 12 },
   ]
 };
 
