@@ -12,6 +12,18 @@ function buildClient(): Client {
     return createClient({ url: remoteUrl, authToken });
   }
 
+  // Serverless hosts have a read-only FS — refuse to use a file-backed DB.
+  const isServerless =
+    process.env.VERCEL === '1' ||
+    !!process.env.LAMBDA_TASK_ROOT ||
+    !!process.env.AWS_LAMBDA_FUNCTION_NAME;
+  if (isServerless) {
+    throw new Error(
+      'DB_URL is not configured. Serverless deployments require a remote libSQL database (e.g. Turso). ' +
+        'Set DB_URL=libsql://... and DB_AUTH_TOKEN=... in your environment variables.',
+    );
+  }
+
   const filePath = resolve(process.cwd(), process.env.DB_PATH ?? 'data/notenrechner.db');
   mkdirSync(dirname(filePath), { recursive: true });
   return createClient({ url: `file:${filePath.replace(/\\/g, '/')}` });
