@@ -1,13 +1,36 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": null,
+  "installCommand": "npm install --legacy-peer-deps && npm install --legacy-peer-deps --prefix server",
+  "functions": {
+    "api/index.ts": {
+      "maxDuration": 10,
+      "memory": 512
+    }
+  },
   "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    { "source": "/api", "destination": "/api/index" }
+  ],
+  "headers": [
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=()" },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+        },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [{ "key": "Cache-Control", "value": "no-store" }]
     }
   ]
 }

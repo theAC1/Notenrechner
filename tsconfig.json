@@ -1,29 +1,31 @@
 {
   "compilerOptions": {
     "target": "ES2022",
-    "experimentalDecorators": true,
-    "useDefineForClassFields": false,
+    "useDefineForClassFields": true,
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "module": "ESNext",
-    "lib": [
-      "ES2022",
-      "DOM",
-      "DOM.Iterable"
-    ],
     "skipLibCheck": true,
-    "types": [
-      "node"
-    ],
     "moduleResolution": "bundler",
+    "allowImportingTsExtensions": false,
+    "resolveJsonModule": true,
     "isolatedModules": true,
-    "moduleDetection": "force",
-    "allowJs": true,
+    "noEmit": true,
     "jsx": "react-jsx",
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["src/*"]
     },
-    "allowImportingTsExtensions": true,
-    "noEmit": true
-  }
+    "types": ["vitest/globals", "@testing-library/jest-dom"]
+  },
+  "include": ["src", "tests"],
+  "exclude": ["node_modules", "dist", "coverage"]
 }
