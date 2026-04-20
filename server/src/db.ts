@@ -3,11 +3,15 @@ import { mkdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 
 function buildClient(): Client {
-  const remoteUrl = process.env.DB_URL;
+  // Accept either our own DB_URL/DB_AUTH_TOKEN names OR the standard names injected
+  // by the Vercel + Turso Cloud integration (TURSO_DATABASE_URL / TURSO_AUTH_TOKEN).
+  const remoteUrl = process.env.DB_URL ?? process.env.TURSO_DATABASE_URL;
   if (remoteUrl) {
-    const authToken = process.env.DB_AUTH_TOKEN;
+    const authToken = process.env.DB_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN;
     if (!authToken) {
-      throw new Error('DB_URL is set but DB_AUTH_TOKEN is missing');
+      throw new Error(
+        'Remote DB URL is set but the auth token is missing. Set DB_AUTH_TOKEN or TURSO_AUTH_TOKEN.',
+      );
     }
     return createClient({ url: remoteUrl, authToken });
   }
@@ -19,8 +23,8 @@ function buildClient(): Client {
     !!process.env.AWS_LAMBDA_FUNCTION_NAME;
   if (isServerless) {
     throw new Error(
-      'DB_URL is not configured. Serverless deployments require a remote libSQL database (e.g. Turso). ' +
-        'Set DB_URL=libsql://... and DB_AUTH_TOKEN=... in your environment variables.',
+      'No remote database configured. Set TURSO_DATABASE_URL + TURSO_AUTH_TOKEN ' +
+        '(via the Vercel Turso integration) or DB_URL + DB_AUTH_TOKEN.',
     );
   }
 
